@@ -1,0 +1,28 @@
+{
+    "description": "Hopefully it will help to fill download manager with content from the page",
+    "manifest_version": 2,
+    "name": "DwnldImgsWebExt",
+    "version": "1.0",
+    "homepage_url": "https://github.com/RadimNedela/DwnldImgsWebExt",
+    "icons": {
+        "48": "icons/dwnldImgsWebExt-48.png"
+    },
+    "permissions": [
+        "downloads",
+        "downloads.shelf",
+        "activeTab",
+        "nativeMessaging"
+    ],
+    "browser_action": {
+        "default_icon": "icons/dwnldImgsWebExt-32.png",
+        "theme_icons": [
+            {
+                "light": "icons/dwnldImgsWebExt-32-light.png",
+                "dark": "icons/dwnldImgsWebExt-32.png",
+                "size": 32
+            }
+        ],
+        "default_title": "DwnldImgsWebExt",
+        "default_popup": "popup/chooseAction.html"
+    }
+}
