@@ -11,9 +11,15 @@ function listenForClicks() {
         function getImages(tabs) {
             browser.tabs.sendMessage(tabs[0].id, { command: "getImages" }, downloadFiles)
         }
+        function getImagePages(tabs) {
+            browser.tabs.sendMessage(tabs[0].id, { command: "getImagePages" }, imagePagesReturned)
+        }
 
         if (e.target.classList.contains("getImages")) {
             browser.tabs.query({ active: true, currentWindow: true }, getImages);
+        }
+        if (e.target.classList.contains("getImagePages")) {
+            browser.tabs.query({ active: true, currentWindow: true }, getImagePages);
         }
     });
 }
@@ -27,7 +33,19 @@ browser.tabs.executeScript({ file: "/contentScripts/dwnldImgsContentScript.js" }
 listenForClicks();
 
 
+function imagePagesReturned(message) {
+    log("image pages returned " + message.imagePages.length + ", " + message.imagePages[0]);
+}
 
+
+function createNewTab(page) {
+    browser.tabs.create({url: page}).then(() => {
+        browser.tabs.executeScript({
+            file: "/contentScripts/newTabContentScript.js",
+          //code: `console.log('location:', window.location.href);`
+        });
+      });
+}
 
 
 function downloadFiles(message) {
@@ -59,9 +77,11 @@ function downloadFiles(message) {
 }
 
 
-
 var log = function (msg) {
     console.error(`: ${msg}`);
+    var elem = document.getElementById("info-content");
+    if (elem)
+        elem.innerHTML += msg + "\n";
 }
 
 
