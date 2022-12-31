@@ -1,6 +1,6 @@
 "use strict";
 
-if (!document.__newTabContentScript) {
-
-    document.__newTabContentScript = true;
+function sayHello() {
+    $('.ap-logo').text("Say Hello");
 }
+

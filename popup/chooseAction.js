@@ -35,16 +35,29 @@ listenForClicks();
 
 function imagePagesReturned(message) {
     log("image pages returned " + message.imagePages.length + ", " + message.imagePages[0]);
+    createNewTab(message.imagePages[0]);
 }
 
 
 function createNewTab(page) {
-    browser.tabs.create({url: page}).then(() => {
-        browser.tabs.executeScript({
-            file: "/contentScripts/newTabContentScript.js",
-          //code: `console.log('location:', window.location.href);`
-        });
-      });
+    log("Creating new tab for " + page);
+    browser.tabs.create({
+        url: page,
+        active: false,
+    })
+        .then(tabCreated,log);
+}
+
+function tabCreated(tab) {
+    browser.tabs.executeScript(tab.id, 
+        {
+        //file: "/contentScripts/newTabContentScript.js",
+        code: `sayHello();`
+    }).then(scriptToTabWritten, log);
+}
+
+function scriptToTabWritten() {
+    log("Script to tab written successfully");
 }
 
 
