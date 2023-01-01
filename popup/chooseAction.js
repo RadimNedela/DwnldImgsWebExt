@@ -52,12 +52,12 @@ function tabCreated(tab) {
     browser.tabs.executeScript(tab.id, 
         {
         //file: "/contentScripts/newTabContentScript.js",
-        code: `sayHello();`
+        code: `getPageInfoAndZipFiles();`
     }).then(scriptToTabWritten, log);
 }
 
-function scriptToTabWritten() {
-    log("Script to tab written successfully");
+function scriptToTabWritten(msg) {
+    log("Script to tab written successfully " + msg[0].Name  + msg[0].Info + "\n" + msg[0].Zips[0]);
 }
 
 
