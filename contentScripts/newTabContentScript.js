@@ -30,7 +30,7 @@ function findAllZips() {
     var links = $("a");
     links.each((index, element) => {
       var href = element.href;
-      if (href.includes("/photo/")) {
+      if (href.includes(".zip?expires")) {
         foundZips.push(href);
       }
     });

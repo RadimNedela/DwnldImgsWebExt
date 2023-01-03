@@ -21,6 +21,12 @@ function listenForClicks() {
         if (e.target.classList.contains("getImagePages")) {
             browser.tabs.query({ active: true, currentWindow: true }, getImagePages);
         }
+        if (e.target.classList.contains("downloadZipInfos")) {
+            downloadZipInfos();
+        }
+        if (e.target.classList.contains("downloadZips")) {
+            downloadZips();
+        }
     });
 }
 
@@ -32,32 +38,67 @@ browser.tabs.executeScript({ file: "/libs/jquery-3.6.0.min.js" });
 browser.tabs.executeScript({ file: "/contentScripts/dwnldImgsContentScript.js" });
 listenForClicks();
 
+const delay = ms => new Promise((resolve, reject) => setTimeout(resolve, ms));
+
+var imagePageInfos = [];
+// {url, tab, currentStatus, name, info, zips}
 
 function imagePagesReturned(message) {
     log("image pages returned " + message.imagePages.length + ", " + message.imagePages[0]);
-    createNewTab(message.imagePages[0]);
+    for(let i = 0; i<message.imagePages.length; i++) {
+        let info = {
+            url: message.imagePages[i],
+            currentStatus: 0
+        };
+        imagePageInfos.push(info);
+    }
 }
 
+function downloadZipInfos() {
+    if (imagePageInfos.length > 0) {
+        let i=0;
+        if (imagePageInfos[i].currentStatus == 0) {
+            createNewTab(imagePageInfos[i].url)
+                .then((tab) => {imagePageInfos[i].tab = tab; return delay(500); })
+                .then(() => getPageInfoAndZipFilesFromTab(i))
+                .then((msg) => scriptToTabWritten(msg, i))
+                .then()
+                .catch(error);
+        }
+    }
+}
+
+function downloadZips() {
+
+}
+
+function error(message) {
+    log("ERROR " + message);
+}
 
 function createNewTab(page) {
     log("Creating new tab for " + page);
-    browser.tabs.create({
+    return browser.tabs.create({
         url: page,
         active: false,
-    })
-        .then(tabCreated,log);
+    });
 }
 
-function tabCreated(tab) {
-    browser.tabs.executeScript(tab.id, 
+function getPageInfoAndZipFilesFromTab(index) {
+    return browser.tabs.executeScript(imagePageInfos[index].tab.id, 
         {
-        //file: "/contentScripts/newTabContentScript.js",
-        code: `getPageInfoAndZipFiles();`
-    }).then(scriptToTabWritten, log);
+        code: "getPageInfoAndZipFiles();"
+    });
 }
 
-function scriptToTabWritten(msg) {
-    log("Script to tab written successfully " + msg[0].Name  + msg[0].Info + "\n" + msg[0].Zips[0]);
+function scriptToTabWritten(msg, index, tab) {
+    var info = imagePageInfos[index];
+    info.name = msg[0].Name;
+    info.info = msg[0].Info;
+    info.zips = msg[0].Zips;
+    info.currentStatus = 2;
+    log("Script to tab written successfully " + info.name + "\n" + info.zips[0]);
+    return browser.tabs.remove(info.tab.id);
 }
 
 
