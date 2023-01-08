@@ -19,17 +19,15 @@ function listenForClicks() {
             runDownloadZipInfo = !runDownloadZipInfo;
             if (runDownloadZipInfo) downloadZipInfos();
         }
-        // if (e.target.classList.contains("downloadZips")) {
-        //     runDownloadZips = !runDownloadZips;
-        //     downloadZips();
-        // }
-        // if (e.target.classList.contains("openNewTab")) {
-        //     openNewTab();
-        // }
+        if (e.target.classList.contains("download-zips")) {
+            runDownloadZips = !runDownloadZips;
+            downloadZips();
+        }
     });
 }
 
 var runDownloadZipInfo = false;
+var runDownloadZips = false;
 var imagePages = [];
 // {status: int, url: string, htmlTable: {rowId: string}
 
@@ -69,7 +67,9 @@ function getImagePages() {
                 }
             }
             if (alreadyExisting) break;
-            imagePages.push({status: 0, url: element});
+            let studio = element.substring(element.lastIndexOf("site=") + 5);
+
+            imagePages.push({status: 0, url: element, studio: studio});
         }
         
         log("I have now " + imagePages.length + " image pages to handle");
@@ -78,45 +78,34 @@ function getImagePages() {
         return browser.tabs.remove(idToRemove);
     }
 
+    function updateImagePagesHtml() {
+        var body = $("#image-pages-table-body");
+        for (let i=0; i<imagePages.length; i++) {
+            let element = imagePages[i];
+    
+            if (typeof(element.htmlTable) !== "object") {
+                let htmlTable = {
+                    rowId: "imagePageHtmlRowId" + i,
+                    columnIds: "imagePageHtmlRow" + i + "Column",
+                };
+                element.htmlTable = htmlTable;
+    
+                let tr = $('<tr id="' + htmlTable.rowId + '"></tr>');
+                for (let k=0; k<6; k++) {
+                    let td = $('<td id="' + htmlTable.columnIds + k + '"></td>');
+                    tr.append(td);
+                }
+                body.append(tr);
+                updateInfoInHTML(element);
+            }
+        };
+    }
+    
     openNewTab()
     .then(newTabIsOpen_PushScript)
     .then(() => scriptToNewTabWritten_ExecuteIt({ command: "getImagePages" }))
     .then(imagePagesReturned)
     .then(updateImagePagesHtml);
-}
-
-function updateImagePagesHtml() {
-    var body = $("#image-pages-table-body");
-    for (let i=0; i<imagePages.length; i++) {
-        let element = imagePages[i];
-
-        if (typeof(element.htmlTable) !== "object") {
-            let htmlTable = {
-                rowId: "imagePageHtmlRowId" + i,
-                columnIds: "imagePageHtmlRow" + i + "Column",
-            };
-            element.htmlTable = htmlTable;
-
-            let tr = $('<tr id="' + htmlTable.rowId + '"></tr>');
-            for (let k=0; k<6; k++) {
-                let td = $('<td id="' + htmlTable.columnIds + k + '"></td>');
-                tr.append(td);
-            }
-            body.append(tr);
-            updateInfoInHTML(element);
-        }
-    };
-}
-
-function updateInfoInHTML(info) {
-    $("#" + info.htmlTable.columnIds + 0).text(info.url);
-    $("#" + info.htmlTable.columnIds + 1).text(info.status);
-    $("#" + info.htmlTable.columnIds + 2).text(info.name);
-    if (info.info)
-        $("#" + info.htmlTable.columnIds + 3).text(info.info.substring(0, 10));
-    $("#" + info.htmlTable.columnIds + 4).text(info.fileName);
-    if (info.zips)
-        $("#" + info.htmlTable.columnIds + 5).text(info.zips[0]);
 }
 
 function downloadZipInfos() {
@@ -206,19 +195,113 @@ function downloadZipInfos() {
         });
     }
 
-    function getFileNameFromUrl(url) {
-        // https://cdncontent.imctransfer.com/content_01/126000/126072/126072.zip?expires=1672784363&token=b4da86c538b34ed3d7bc82f5d3d043be
-        const regex1 = RegExp('[^/]*.zip', 'g');
-        let array1 = regex1.exec(url);
-        let name = array1[0];
-        return name;
-    }    
-    
-
     next();
 }
 
+function downloadZips() {
+    function next() {
+        if (runDownloadZips) {
+            var info = getNextZipToDownload();
+            if (info)
+                doTheDownload(info);
+        }
+    }
+    
+    function getNextZipToDownload() {
+        log("Trying to find next file to download from " + imagePages.length + " pages");
+        for (var i = 0; i<imagePages.length; i++) {
+            var info = imagePages[i];
+            if (info.status == 2) {
+                log("next zip to download foud " + info.zips[0]);
+                return info;
+            }
+        }
+    }
+    
+    function doTheDownload(info) {
+        if (info.status == 2) {
+            info.status = 10;
+            var url = info.zips[0];
+            if (url) {
+                var fileName = info.name;
+                if (!fileName) fileName = "Unknown";
+                let name = getFileNameFromUrl(url) || "unknown.zip";
+                fileName = info.studio + "/" + fileName + "/" + name;
+                fileName = fileName.replace(/ /g, "_");
+    
+                browser.downloads.download({
+                    url: url,
+                    filename: fileName
+                }).then(downloadItemID => {
+                    downloadTextFile(fileName, info);
+                    updateInfoInHTML(info);
+                    searchForDownloads(downloadItemID);
+                });
+            }
+        }
+    }
+    
+    function searchForDownloads(downloadItemID) {
+        browser.downloads.search({ id: downloadItemID })
+        .then(checkDownloads, error);
+    }
+    
+    function checkDownloads(arrayOfDownloadItems) {
+        for (let i=0; i<arrayOfDownloadItems.length; i++) {
+            var downloadItem = arrayOfDownloadItems[i];
+            log("Checking file " + downloadItem.filename);
+            log("file status: --" + downloadItem.state + "--");
+            if (downloadItem.state === "complete") {
+                arrayOfDownloadItems.splice(i);
+                downloadZips();
+            }
+        }
+        if (arrayOfDownloadItems.length > 0){
+            setTimeout(() => {
+                searchForDownloads(arrayOfDownloadItems[0].id);
+            }, 1000);
+        }
+    }
+    
+    function downloadTextFile(fileName, info) {
+        var file = new Blob([info.info], {type: 'plain/text'});
+        var a = document.createElement("a"), url = URL.createObjectURL(file);
+            a.href = url;
+            a.download = fileName.replace(".zip", ".txt").replace(new RegExp("/", "g"), "$");
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);  
+            }, 0); 
+    }
+    
+    next();
+}
 
+function updateInfoInHTML(info) {
+    $("#" + info.htmlTable.columnIds + 0).text(info.url);
+    $("#" + info.htmlTable.columnIds + 1).text(info.status);
+    $("#" + info.htmlTable.columnIds + 2).text(info.name);
+    $("#" + info.htmlTable.columnIds + 3).text(info.studio);
+    if (info.info)
+        $("#" + info.htmlTable.columnIds + 4).text(info.info.substring(0, 10));
+    $("#" + info.htmlTable.columnIds + 5).text(info.fileName);
+    if (info.zips)
+        $("#" + info.htmlTable.columnIds + 6).text(info.zips[0]);
+}
+
+function getFileNameFromUrl(url) {
+    // https://cdncontent.imctransfer.com/content_01/126000/126072/126072.zip?expires=1672784363&token=b4da86c538b34ed3d7bc82f5d3d043be
+    const regex1 = RegExp('[^/]*.zip', 'g');
+    let array1 = regex1.exec(url);
+    let name = array1[0];
+    return name;
+}    
+
+function error(message) {
+    log("ERROR " + message);
+}
 
 function log(msg) {
     console.error(`: ${msg}`);
@@ -236,22 +319,8 @@ function log(msg) {
 * and add a click handler.
 */
 log(originalPageTabId);
-$('#image-pages').val("https://adultprime.com/studios/photos?website=Youngbusty");
+$('#image-pages').val("https://adultprime.com/studios/photos?q=&website=Youngbusty&niche=&year=&type=&sort=&page=26#focused");
 browser.tabs.query({currentWindow: true})
     .then((tabs) => {for(let i=0; i<tabs.length; i++) log("tab " + tabs[i].id);})
 listenForClicks();
 
-const alreadyDownloaded = [
-    124940,
-    125102,
-    125407,
-    124938,
-    125124,
-    124939,
-    125408,
-    125411,
-    125410,
-    126072,
-    124942,
-    125409,
-];
