@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Moje Stránka</title>
+	<link rel="stylesheet" href="myPage.css">
+</head>
+<body>
+	<h1 id="top-h1"></h1>
+	<input type="text" id="image-pages" name="image-pages" class="html-input">
+	<div id="get-image-pages" class="button get-image-pages">Get Image Pages</div>
+	<div id="download-zip-infos" class="button download-zip-infos">Download zip infos</div>
+
+	<div class="info-content" id="info-content"></div>
+
+	<div id="image-pages-div">
+		<table id="image-pages-table">
+			<thead>
+				<tr>
+					<th>URL</th>
+					<th>Status</th>
+					<th>Name</th>
+					<th>Info</th>
+					<th>FileName</th>
+					<th>Zip</th>
+				</tr>
+			</thead>
+			<tbody id="image-pages-table-body"></tbody>
+		</table>
+	</div>
+	<script src="/libs/jquery-3.6.0.min.js"></script>
+    <script src="myPage.js"></script>
+</body>
+</html>

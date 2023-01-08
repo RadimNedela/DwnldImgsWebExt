@@ -1,0 +1,22 @@
+.info-content {
+    width: 100%;
+    height: 250px;
+}
+
+.button {
+    margin: 3% auto;
+    padding: 4px;
+    text-align: center;
+    font-size: 1.5em;
+    cursor: pointer;
+    background-color: #E5F2F2;
+}
+  
+.button:hover {
+    background-color: #CFF2F2;
+}
+  
+.html-input {
+    width: 100%;
+}
+  

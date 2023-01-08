@@ -19,7 +19,6 @@ if (!document.__dwnldImgsContentScript) {
       });
   });
 
-
   function getImagePages() {
     var foundImagePages = [];
 

@@ -1,6 +1,6 @@
 html, body {
-  width: 300px;
-  height: 300px;
+  width: 800px;
+  height: 800px;
 }
   
 .hidden {
@@ -24,6 +24,6 @@ html, body {
 }
 
 .info-content {
-  width: 200px;
+  width: 750px;
   height: 150px;
 }
