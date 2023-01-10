@@ -225,6 +225,7 @@ function downloadZips() {
             if (url) {
                 var fileName = info.name;
                 if (!fileName) fileName = "Unknown";
+                fileName = fileName.replace(".", "_");
                 let name = getFileNameFromUrl(url) || "unknown.zip";
                 fileName = info.studio + "/" + fileName + "/" + name;
                 fileName = fileName.replace(/ /g, "_");
@@ -319,7 +320,7 @@ function log(msg) {
 * and add a click handler.
 */
 log(originalPageTabId);
-$('#image-pages').val("https://adultprime.com/studios/photos?q=&website=Youngbusty&niche=&year=&type=&sort=&page=26#focused");
+$('#image-pages').val("https://adultprime.com/studios/photos?q=&website=Digitaldesire&niche=&year=&type=&sort=&page=47#focused");
 browser.tabs.query({currentWindow: true})
     .then((tabs) => {for(let i=0; i<tabs.length; i++) log("tab " + tabs[i].id);})
 listenForClicks();
