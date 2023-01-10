@@ -30,11 +30,22 @@ var runDownloadZipInfo = false;
 var runDownloadZips = false;
 var imagePages = [];
 // {status: int, url: string, htmlTable: {rowId: string}
-
+const logCountLenght = 800;
 
 function getImagePages() {
     var newOpenedTabId;
 
+    function logImagePages(msg) {
+        console.error(`: ${msg}`);
+        var elem = document.getElementById("get-image-pages-info-content");
+        if (elem) {
+            var current = elem.innerHTML;
+            if (current.length > logCountLenght)
+                current = current.substring(current.length - logCountLenght);
+            elem.innerHTML = current + msg + "\n";
+        }
+    }
+    
     function openNewTab() {
         let url = $('#image-pages').val();
         let options = {
@@ -45,18 +56,18 @@ function getImagePages() {
     }
     
     function newTabIsOpen_PushScript(tabInfo) {
-        log("new tab open, pushing script to it");
+        logImagePages("new tab open, pushing script to it");
         newOpenedTabId = tabInfo.id;
         return browser.tabs.executeScript(newOpenedTabId, { file: "myPageNewTabContentScript.js" });
     }
     
     function scriptToNewTabWritten_ExecuteIt(objToExecute) {
-        log("script to tab written, executing ");
+        logImagePages("script to tab written, executing ");
         return browser.tabs.sendMessage(newOpenedTabId, objToExecute);
     }
     
     function imagePagesReturned(imagePageInfo) {
-        log("image pages returned with " + imagePageInfo.response);
+        logImagePages("image pages returned with " + imagePageInfo.response);
         for(let i=0; i<imagePageInfo.imagePages.length; i++) {
             let element = imagePageInfo.imagePages[i];
             let alreadyExisting = false;
@@ -72,7 +83,7 @@ function getImagePages() {
             imagePages.push({status: 0, url: element, studio: studio});
         }
         
-        log("I have now " + imagePages.length + " image pages to handle");
+        logImagePages("I have now " + imagePages.length + " image pages to handle");
         let idToRemove = newOpenedTabId;
         newOpenedTabId = undefined;
         return browser.tabs.remove(idToRemove);
@@ -105,28 +116,42 @@ function getImagePages() {
     .then(newTabIsOpen_PushScript)
     .then(() => scriptToNewTabWritten_ExecuteIt({ command: "getImagePages" }))
     .then(imagePagesReturned)
-    .then(updateImagePagesHtml);
+    .then(updateImagePagesHtml)
+    .catch((message) => {
+        logImagePages("ERROR " + message);
+        if (newOpenedTabId)
+            browser.tabs.remove(newOpenedTabId);
+        newOpenedTabId = undefined;
+        getImagePages();
+    });
 }
 
 function downloadZipInfos() {
-    var downloadZipInfosRunning = 0;
+    function logZipInfos(msg) {
+        console.error(`: ${msg}`);
+        var elem = document.getElementById("download-zip-infos-info-content");
+        if (elem) {
+            var current = elem.innerHTML;
+            if (current.length > logCountLenght)
+                current = current.substring(current.length - logCountLenght);
+            elem.innerHTML = current + msg + "\n";
+        }
+    }
 
     function next() {
         if (runDownloadZipInfo) {
             var info = getNextInfoToRun();
-            while (info) {
+            if (info)
                 downloadZipInfo(info);
-                info = getNextInfoToRun();
-            }
+            else
+                runDownloadZipInfo = false;
         }
     }
 
     function getNextInfoToRun() {
-        if (downloadZipInfosRunning > 0) return null;
         for(let i=0; i<imagePages.length; i++) {
-            if (imagePages[i].status == 0) {
-                downloadZipInfosRunning++;
-                imagePages[i].status = 1;
+            if (imagePages[i].status == 0 || imagePages[i].status == 3) {
+                imagePages[i].status += 1;
                 updateInfoInHTML(imagePages[i]);
                 return imagePages[i];
             }
@@ -135,7 +160,7 @@ function downloadZipInfos() {
     }
 
     function createNewTab(page) {
-        log("Creating new tab for " + page);
+        logZipInfos("Creating new tab for " + page);
         return browser.tabs.create({
             url: page,
             active: false,
@@ -147,15 +172,19 @@ function downloadZipInfos() {
             .then((tab) => {info.tab = tab; return delay(1500); })
             .then(() => getPageInfoAndZipFilesFromTab(info))
             .then((msg) => scriptToTabWritten(msg, info))
-            .then(() => {downloadZipInfosRunning--; downloadZipInfos();})
+            .then(() => downloadZipInfos())
             .catch(msg => downloadZipInfoFailed(msg, info));
     }
 
     function downloadZipInfoFailed(msg, info) {
-        log(msg);
-        browser.tabs.remove(info.tab.id)
-        .then(() => info.status = 0);
+        logZipInfos(msg);
+        browser.tabs.remove(info.tab.id);
+        if (info.status > 2)
+            info.status = 8; // error, ignore it
+        else
+            info.status = 3;
         updateInfoInHTML(info);
+        next();
     }
     
 
@@ -165,7 +194,7 @@ function downloadZipInfos() {
         info.zips = msg[0].Zips;
         info.status = 2;
         updateInfoInHTML(info);
-        log("Script to tab written successfully " + info.name + "\n" + info.zips[0]);
+        logZipInfos("Script to tab written successfully " + info.name + "\n" + info.zips[0]);
         checkAlreadyDownloadedFiles(info);
         updateInfoInHTML(info);
         return browser.tabs.remove(info.tab.id);
@@ -177,14 +206,14 @@ function downloadZipInfos() {
             var fileName = getFileNameFromUrl(url);
             fileName = fileName.replace(".zip", "");
             info.fileName = fileName;
-            log("checking file name " + fileName);
+            logZipInfos("checking file name " + fileName);
             for (let i=0; i<alreadyDownloaded.length; i++) {
                 if (fileName == alreadyDownloaded[i]) {
                     info.status = 10;
                     return;
                 }
             }
-            log("file " + fileName +" to be downloaded");
+            logZipInfos("file " + fileName +" to be downloaded");
         }
     }    
 
@@ -199,33 +228,48 @@ function downloadZipInfos() {
 }
 
 function downloadZips() {
+    var info;
+
+    function logDownloadZips(msg) {
+        console.error(`: ${msg}`);
+        var elem = document.getElementById("download-zips-info-content");
+        if (elem) {
+            var current = elem.innerHTML;
+            if (current.length > logCountLenght)
+                current = current.substring(current.length - logCountLenght);
+            elem.innerHTML = current + msg + "\n";
+        }
+    }
+    
     function next() {
         if (runDownloadZips) {
-            var info = getNextZipToDownload();
+            info = getNextZipToDownload();
             if (info)
-                doTheDownload(info);
+                doTheDownload();
         }
     }
     
     function getNextZipToDownload() {
-        log("Trying to find next file to download from " + imagePages.length + " pages");
+        logDownloadZips("Trying to find next file to download from " + imagePages.length + " pages");
         for (var i = 0; i<imagePages.length; i++) {
-            var info = imagePages[i];
+            info = imagePages[i];
             if (info.status == 2) {
-                log("next zip to download foud " + info.zips[0]);
+                logDownloadZips("next zip to download foud " + info.zips[0]);
                 return info;
             }
         }
     }
     
-    function doTheDownload(info) {
+    function doTheDownload() {
         if (info.status == 2) {
             info.status = 10;
+            updateInfoInHTML(info);
             var url = info.zips[0];
             if (url) {
                 var fileName = info.name;
                 if (!fileName) fileName = "Unknown";
                 fileName = fileName.replace(".", "_");
+                fileName = fileName.replace("|", "_");
                 let name = getFileNameFromUrl(url) || "unknown.zip";
                 fileName = info.studio + "/" + fileName + "/" + name;
                 fileName = fileName.replace(/ /g, "_");
@@ -234,9 +278,15 @@ function downloadZips() {
                     url: url,
                     filename: fileName
                 }).then(downloadItemID => {
-                    downloadTextFile(fileName, info);
+                    downloadTextFile(fileName);
+                    info.status = 11;
                     updateInfoInHTML(info);
                     searchForDownloads(downloadItemID);
+                }).catch((message) => {
+                    logDownloadZips("ERROR: " + message);
+                    info.status = 15;
+                    updateInfoInHTML(info);
+                    next();
                 });
             }
         }
@@ -244,16 +294,28 @@ function downloadZips() {
     
     function searchForDownloads(downloadItemID) {
         browser.downloads.search({ id: downloadItemID })
-        .then(checkDownloads, error);
+        .then(checkDownloads)
+        .catch((message) => {
+            logDownloadZips("ERROR: " + message);
+            info.status = 16;
+            updateInfoInHTML(info);
+            next();
+        });
     }
     
     function checkDownloads(arrayOfDownloadItems) {
         for (let i=0; i<arrayOfDownloadItems.length; i++) {
             var downloadItem = arrayOfDownloadItems[i];
-            log("Checking file " + downloadItem.filename);
-            log("file status: --" + downloadItem.state + "--");
+            logDownloadZips("Checking file " + downloadItem.filename);
+            logDownloadZips("file status: --" + downloadItem.state + "--");
             if (downloadItem.state === "complete") {
                 arrayOfDownloadItems.splice(i);
+                downloadZips();
+            }
+            if (downloadItem.state === "interrupted") {
+                arrayOfDownloadItems.splice(i);
+                info.status = 17;
+                updateInfoInHTML(info);
                 downloadZips();
             }
         }
@@ -264,7 +326,7 @@ function downloadZips() {
         }
     }
     
-    function downloadTextFile(fileName, info) {
+    function downloadTextFile(fileName) {
         var file = new Blob([info.info], {type: 'plain/text'});
         var a = document.createElement("a"), url = URL.createObjectURL(file);
             a.href = url;
@@ -309,8 +371,8 @@ function log(msg) {
     var elem = document.getElementById("info-content");
     if (elem) {
         var current = elem.innerHTML;
-        if (current.length > 500)
-            current = current.substring(current.length - 500);
+        if (current.length > logCountLenght)
+            current = current.substring(current.length - logCountLenght);
         elem.innerHTML = current + msg + "\n";
     }
 }
@@ -320,7 +382,7 @@ function log(msg) {
 * and add a click handler.
 */
 log(originalPageTabId);
-$('#image-pages').val("https://adultprime.com/studios/photos?q=&website=Digitaldesire&niche=&year=&type=&sort=&page=47#focused");
+$('#image-pages').val("https://adultprime.com/studios/photos?q=&website=Sinfulsoft&niche=&year=&type=&sort=&page=1#focused");
 browser.tabs.query({currentWindow: true})
     .then((tabs) => {for(let i=0; i<tabs.length; i++) log("tab " + tabs[i].id);})
 listenForClicks();

@@ -1,17 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<title>Moje Stránka</title>
 	<link rel="stylesheet" href="myPage.css">
 </head>
+
 <body>
 	<h1 id="top-h1"></h1>
 	<input type="text" id="image-pages" name="image-pages" class="html-input">
-	<div id="get-image-pages" class="button get-image-pages">Get Image Pages</div>
-	<div id="download-zip-infos" class="button download-zip-infos">Download zip infos</div>
-	<div id="download-zips" class="button download-zips">Download Zips</div>
-
+	<table>
+		<thead>
+			<tr>
+				<th>action</th>
+				<th>info</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>
+					<div id="get-image-pages" class="button get-image-pages">Get Image Pages</div>
+				</td>
+				<td>
+					<div class="info-content" id="get-image-pages-info-content"></div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div id="download-zip-infos" class="button download-zip-infos">Download zip infos</div>
+				</td>
+				<td>
+					<div class="info-content" id="download-zip-infos-info-content"></div>
+				</td>
+				<td>
+			<tr>
+				<td>
+					<div id="download-zips" class="button download-zips">Download Zips</div>
+				</td>
+				<td>
+					<div class="info-content" id="download-zips-info-content"></div>
+				</td>
+			</tr>>
+		</tbody>
+	</table>
 	<div class="info-content" id="info-content"></div>
 
 	<div id="image-pages-div">
@@ -31,7 +63,8 @@
 		</table>
 	</div>
 	<script src="/libs/jquery-3.6.0.min.js"></script>
-    <script src="alreadyDownloaded.js"></script>
-    <script src="myPage.js"></script>
+	<script src="alreadyDownloaded.js"></script>
+	<script src="myPage.js"></script>
 </body>
+
 </html>
