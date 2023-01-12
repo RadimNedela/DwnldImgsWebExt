@@ -276,6 +276,7 @@ function downloadZips() {
                 if (!fileName) fileName = "Unknown";
                 fileName = fileName.replace(".", "_");
                 fileName = fileName.replace("|", "_");
+                fileName = fileName.replace("?", "_");
                 let name = getFileNameFromUrl(url) || "unknown.zip";
                 fileName = info.studio + "/" + fileName + "/" + name;
                 fileName = fileName.replace(/ /g, "_");
@@ -389,7 +390,7 @@ function log(msg) {
 */
 log(originalPageTabId);
 $('#image-pages').val("https://adultprime.com/studios/photos?q=&website=Clubsweethearts&niche=&year=&type=&sort=&page={0}#focused");
-$('#replace-number').val(1);
+$('#replace-number').val(20);
 browser.tabs.query({currentWindow: true})
     .then((tabs) => {for(let i=0; i<tabs.length; i++) log("tab " + tabs[i].id);})
 listenForClicks();
