@@ -48,6 +48,12 @@ function getImagePages() {
     
     function openNewTab() {
         let url = $('#image-pages').val();
+        let $replace = $('#replace-number');
+        let replace = $replace.val();
+        if (url.includes("{0}")) {
+            $replace.val(1 + parseInt(replace));
+            url = url.replace("{0}", replace);
+        }
         let options = {
             url: url,
             active: false,
@@ -382,7 +388,8 @@ function log(msg) {
 * and add a click handler.
 */
 log(originalPageTabId);
-$('#image-pages').val("https://adultprime.com/studios/photos?q=&website=Sinfulsoft&niche=&year=&type=&sort=&page=1#focused");
+$('#image-pages').val("https://adultprime.com/studios/photos?q=&website=Clubsweethearts&niche=&year=&type=&sort=&page={0}#focused");
+$('#replace-number').val(1);
 browser.tabs.query({currentWindow: true})
     .then((tabs) => {for(let i=0; i<tabs.length; i++) log("tab " + tabs[i].id);})
 listenForClicks();
